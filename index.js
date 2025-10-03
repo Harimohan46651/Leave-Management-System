@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require("express");
 const { connectDB } = require('./src/db');
 const authRoutes = require('./src/routes/auth');
+const leavesRoutes = require('./src/routes/leaves');
 const app = express();
 const PORT =process.env.PORT || 3000;
 app.use(express.json());
@@ -13,6 +14,7 @@ connectDB().catch(console.error);
 console.log('Auth routes loaded:', typeof authRoutes);
 console.log('Mounting auth routes at /auth');
 app.use('/auth', authRoutes);
+app.use('/leaves', leavesRoutes);
 
 
 app.get("/", (req, res) => {
