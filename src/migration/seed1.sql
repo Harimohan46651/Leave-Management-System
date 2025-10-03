@@ -1,5 +1,5 @@
-CREATE DATABASE IF NOT EXISTS leave_management;
-USE leave_management;
+CREATE DATABASE IF NOT EXISTS db;
+USE db;
 
 -- employees table (includes password for auth)
 CREATE TABLE IF NOT EXISTS employees (
