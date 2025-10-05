@@ -3,6 +3,8 @@ const express = require("express");
 const { connectDB } = require('./src/db');
 const authRoutes = require('./src/routes/auth');
 const leavesRoutes = require('./src/routes/leaves');
+const approvalsRoutes = require('./src/routes/approvals');
+const adminRoutes = require('./src/routes/admin');
 const app = express();
 const PORT =process.env.PORT || 3000;
 app.use(express.json());
@@ -15,6 +17,8 @@ console.log('Auth routes loaded:', typeof authRoutes);
 console.log('Mounting auth routes at /auth');
 app.use('/auth', authRoutes);
 app.use('/leaves', leavesRoutes);
+app.use('/approvals', approvalsRoutes);
+app.use('/admin', adminRoutes);
 
 
 app.get("/", (req, res) => {
