@@ -189,9 +189,14 @@ router.post('/:id/approve', authMiddleware, async (req, res) => {
     const { comments } = req.body;
     const leaveId = req.params.id;
 
-    // Get leave request details
+    // Get leave request details with manager info
     const [leaveRows] = await pool.query(
-      'SELECT lr.*, e.reporting_manager_id FROM leave_requests lr JOIN employees e ON lr.employee_id = e.id WHERE lr.id = ?',
+      `SELECT lr.*, e.reporting_manager_id, 
+       rm.id as manager_uuid, rm.employee_code as manager_code
+       FROM leave_requests lr 
+       JOIN employees e ON lr.employee_id = e.id 
+       LEFT JOIN employees rm ON (e.reporting_manager_id = rm.id OR e.reporting_manager_id = rm.employee_code)
+       WHERE lr.id = ?`,
       [leaveId]
     );
 
@@ -209,12 +214,17 @@ router.post('/:id/approve', authMiddleware, async (req, res) => {
     }
     
     // Check authorization and determine next status
-    if (req.user.role === 'reporting_manager' && leave.reporting_manager_id === req.user.id && leave.status === 'pending_rm') {
+    const isReportingManager = req.user.role === 'reporting_manager' && 
+                              (leave.reporting_manager_id === req.user.id || 
+                               leave.manager_uuid === req.user.id) && 
+                              leave.status === 'pending_rm';
+    
+    if (isReportingManager) {
       newStatus = 'pending_hr';
       approverType = 'reporting_manager';
     } else if (req.user.role === 'hr_manager' && leave.status === 'pending_hr') {
       // Ensure HR manager is different from reporting manager
-      if (leave.reporting_manager_id === req.user.id) {
+      if (leave.reporting_manager_id === req.user.id || leave.manager_uuid === req.user.id) {
         return res.status(403).json({ error: 'Same person cannot be both reporting manager and HR manager for approval' });
       }
       newStatus = 'approved';
@@ -250,9 +260,14 @@ router.post('/:id/reject', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Comments required for rejection' });
     }
 
-    // Get leave request details
+    // Get leave request details with manager info
     const [leaveRows] = await pool.query(
-      'SELECT lr.*, e.reporting_manager_id FROM leave_requests lr JOIN employees e ON lr.employee_id = e.id WHERE lr.id = ?',
+      `SELECT lr.*, e.reporting_manager_id, 
+       rm.id as manager_uuid, rm.employee_code as manager_code
+       FROM leave_requests lr 
+       JOIN employees e ON lr.employee_id = e.id 
+       LEFT JOIN employees rm ON (e.reporting_manager_id = rm.id OR e.reporting_manager_id = rm.employee_code)
+       WHERE lr.id = ?`,
       [leaveId]
     );
 
@@ -269,7 +284,12 @@ router.post('/:id/reject', authMiddleware, async (req, res) => {
     }
 
     // Check authorization
-    if (req.user.role === 'reporting_manager' && leave.reporting_manager_id === req.user.id && leave.status === 'pending_rm') {
+    const isReportingManager = req.user.role === 'reporting_manager' && 
+                              (leave.reporting_manager_id === req.user.id || 
+                               leave.manager_uuid === req.user.id) && 
+                              leave.status === 'pending_rm';
+    
+    if (isReportingManager) {
       approverType = 'reporting_manager';
     } else if (req.user.role === 'hr_manager' && leave.status === 'pending_hr') {
       approverType = 'hr_manager';
